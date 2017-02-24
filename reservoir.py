@@ -1,9 +1,8 @@
 from __future__ import division
 
 import numpy as np
-from numpy.linalg import inv
-from itertools import product
 import seaborn as sns
+from itertools import product
 
 
 class Well(object):
@@ -122,28 +121,27 @@ class Reservoir(Grid):
         for n, location in enumerate(self.locations):
             lx, ly, lz = location
             adjacents = self._get_five_point(lx, ly, lz)
-            e_val = 0
+            e_val = 0  # total node flux
             for adjacent in adjacents:
-                adj_x, adj_y, adj_z = adjacent
-                gdx, gdy, gdz = self._get_distances(location, adjacent)
-                kx, ky, kz = self.permeabilities[adj_x, adj_y, adj_z]
-                adx, ady, adz = self.dimensions[adj_x, adj_y, adj_z]
-                if gdx != 0:
+                adj_x, adj_y, adj_z = adjacent  # adjacent node grid location
+                gdx, gdy, gdz = self._get_distances(location, adjacent)  # distance to adjacent node
+                kx, ky, kz = self.permeabilities[adj_x, adj_y, adj_z]  # adjacent node permeabilities
+                adx, ady, adz = self.dimensions[adj_x, adj_y, adj_z]  # adjacent node dimensions
+                if gdx != 0:  # distance along x axis
                     adj_flux = 0.006328 * kx * ady * adz / adx
-                elif gdy != 0:
+                elif gdy != 0:  # distance along y axis
                     adj_flux = 0.006328 * ky * adx * adz / ady
-                else:
+                else:  # distance along z axis
                     adj_flux = 0.006328 * kz * adx * ady / adz
-                # print adj_flux
                 e_val += adj_flux
                 adj_index = self.locations.index((adj_x, adj_y, adj_z))
                 a_mat[n, adj_index] = adj_flux
-            ndx, ndy, ndz = self.dimensions[lx, ly, lz]
-            volume = ndx * ndy * ndz * self.porosities[lx, ly, lz]
-            a_mat[n, n] = -e_val - volume / step
-            n_pressure = self.pressures[lx, ly, lz]
-            r_mat[n, 0] = -n_pressure * volume / step - self.well_flow_rate(n, n_pressure)
-        a_mat = inv(a_mat)
+            ndx, ndy, ndz = self.dimensions[lx, ly, lz]  # node dimensions
+            volume = ndx * ndy * ndz * self.porosities[lx, ly, lz]  # node effective volume
+            a_mat[n, n] = -e_val - volume / step  # adjusted flux
+            n_pressure = self.pressures[lx, ly, lz]  # node pressure
+            r_mat[n, 0] = -n_pressure * volume / step - self.well_flow_rate(n, n_pressure)  #
+        a_mat = np.linalg.inv(a_mat)
         p_mat = np.dot(a_mat, r_mat)
         self.pressures = p_mat[:, 0].reshape(self.shape)
 
